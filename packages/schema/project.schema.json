@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "video-editor project",
+  "type": "object",
+  "properties": {
+    "composition": {
+      "type": "object",
+      "properties": {
+        "duration": { "type": "number", "minimum": 0 },
+        "fps": { "type": "number", "exclusiveMinimum": 0 }
+      },
+      "required": ["duration", "fps"]
+    },
+    "effects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": { "const": "effect" },
+          "name": { "type": "string" },
+          "start": { "type": "number", "minimum": 0 },
+          "duration": { "type": "number", "exclusiveMinimum": 0 },
+          "params": { "type": "object" },
+          "engine": { "type": "string" }
+        },
+        "required": ["type", "name", "start", "duration", "params"]
+      }
+    }
+  },
+  "required": ["composition"]
+}
