@@ -1,34 +1,53 @@
 # Skills
 
-A Skill is a reusable semantic recipe for editing.
+A Skill is a reusable semantic editing recipe.
 
-A Skill must define:
+## Contract
 
+A Skill describes:
 - name
+- category
 - intent
 - inputs
 - defaults
+- constraints
 - output
 - preferred engine
-- fallback engine where possible
+- fallback
+- examples
 
-Example:
+It must not require the caller to know whether execution happens in Rust, WASM, Python, FFmpeg, or Remotion.
 
-```yaml
-name: glitch
-type: effect
+## Categories
 
-input:
-  source: clip
-  duration: 0.4
-  intensity: 0.7
+video/
+effects/
+transition/
+text/
+audio/
+analysis/
+presets/
+export/
 
-engine:
-  preferred: wasm
-  fallback: ffmpeg
+## Composition
 
-output:
-  type: effect
-```
+Skills can call or compose other Skills.
 
-Skills should not require the caller to know whether the implementation is Rust, WASM, Python, FFmpeg, or Remotion.
+youtube-short:
+- scene-detection
+- silence-cut
+- punch-in
+- subtitle
+- kinetic-text
+- sound-ducking
+- color
+
+Editing styles therefore become reusable agent capabilities.
+
+## Resolution
+
+natural language → skill matching → parameter extraction → validation → project mutation → engine selection → preview/render
+
+## Versioning
+
+Skills should be versioned independently from engine implementations. Project history records Skill/version and resolved engine so old edits remain inspectable.
