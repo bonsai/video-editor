@@ -25,7 +25,7 @@ Remotion / Python / Rust-WASM / FFmpeg
 Preview / Render / Export
 ```
 
-GUIはあってもよいが主役ではない。OpenCodeからMCPで直接編集でき、同じSkillをCLI・ブラウザ・CIでも再利用できることを目標にする。
+GUIはあってもよいが主役ではない。OpenCodeからMCPで直接編集でき、同じSkillをCLI・REST・ブラウザ・CIでも再利用できることを目標にする。
 
 ## Core architecture
 
@@ -36,9 +36,7 @@ GUIはあってもよいが主役ではない。OpenCodeからMCPで直接編集
                            ▼
                         OpenCode
                            │
-                           ▼
-                          MCP
-                  conversation / tools
+                    MCP / REST / CLI
                            │
                            ▼
                          Skills
@@ -50,11 +48,10 @@ GUIはあってもよいが主役ではない。OpenCodeからMCPで直接編集
                            │
           ┌────────────────┼────────────────┐
           ▼                ▼                ▼
-      Remotion          Python          Rust → WASM
-       / TypeScript      analysis          effects
+   TSX / Remotion      Python          Rust / JS → WASM
+   composition         analysis        visual effects
+   text / telop        STT / CV        style / effects
           │                │                │
-          │          STT / scene / CV       │
-          │          silence / beat        │
           └────────────────┼────────────────┘
                            ▼
                          FFmpeg
@@ -67,31 +64,106 @@ GUIはあってもよいが主役ではない。OpenCodeからMCPで直接編集
                        MP4 / WebM
 ```
 
+## Responsibility boundary
+
+**TSX/Remotion = 文字・構成・動き。RS/Rust・JS・WASM = 映像をかっこよくする効果。**
+
+### TSX / Remotion — meaning & composition
+
+テロップ文字はTSX/Remotionを主役にする。
+
+- テロップ
+- 字幕
+- タイトル
+- キネティックタイポグラフィ
+- Lower Third
+- CTA
+- ロゴ
+- SVG / Canvas
+- レイアウト
+- テキストアニメーション
+- レイヤー
+- タイムライン
+- Composition
+
+```tsx
+<Telop
+  text="ここがポイント"
+  emphasis="strong"
+  animation="pop"
+/>
+```
+
+### JS / Rust / WASM — coolness & visual effects
+
+映像の質感、勢い、スタイルを担当する。
+
+- glitch
+- RGB shift
+- glow
+- blur
+- grain / film
+- shake
+- distortion
+- chromatic aberration
+- particles
+- noise
+- light leak
+- scanline
+- transition
+- speed ramp
+- frame effects
+
+原則として、**「何を見せるか」はTSX、「どうかっこよく見せるか」はEffects**。
+
+### Skillで統合
+
+利用者は実装言語を意識しない。
+
+```text
+「ここ、テロップを強調してMVっぽくカッコよく」
+                     │
+                     ▼
+                   Skill
+                 ┌───┴────┐
+                 ▼         ▼
+              TSX text   WASM effects
+                 │         │
+                 └────┬────┘
+                      ▼
+                   Remotion
+                      ▼
+                    Render
+```
+
 ## Separation of concerns
 
 | Layer | Role |
 |---|---|
 | **OpenCode** | 自然言語による編集・制作エージェント |
 | **MCP** | 会話と編集プロジェクトをつなぐインターフェース |
+| **REST** | フロントから編集ジョブを呼ぶHTTPインターフェース |
 | **Skills** | 「何を実現するか」を定義する再利用可能な編集知能 |
 | **project.json** | 動画プロジェクトのcanonical data |
-| **Remotion / TS** | composition、timeline、layer、text、motion、SVG/Canvas |
+| **TSX / Remotion** | composition、timeline、layer、text、telop、motion、SVG/Canvas |
 | **Python** | STT、scene/silence/beat/audio/CV/ML、分析と判断材料 |
-| **Rust** | 高速なmedia/frame/pixel処理 |
+| **JS** | 軽量なブラウザ/ランタイム向けvisual effects |
+| **Rust** | 高速なframe/pixel/media処理 |
 | **WASM** | Rust effectsをブラウザ等でも実行できるportable runtime |
 | **FFmpeg** | codec、decode/encode、cut、concat、media I/O |
 | **Browser** | preview / optional lightweight editor |
-| **GitHub Actions** | reproducible render / artifact / CI |
+| **GitHub Actions / AW** | reproducible edit/render / artifact / CI |
 
 ### 言語の考え方
 
-- **TS = composition / interface**
+- **TSX = text / composition / motion**
 - **Python = think / research / analysis**
+- **JS = lightweight visual effects**
 - **Rust = work / performance**
 - **WASM = everywhere**
 - **FFmpeg = media foundation**
 
-Pythonで分析して、Rust/WASMで重いEffectを実行し、Remotionで最終構成する。
+Pythonで分析し、TSXで意味と構成を作り、JS/Rust/WASMで映像をかっこよくし、Remotionで最終構成する。
 
 ## Monorepo
 
@@ -104,15 +176,19 @@ video-editor/
 │
 ├── packages/
 │   ├── schema/                   # project / effect / skill schemas
-│   ├── skills/                   # semantic editing Skills
+│   ├── skills/
+│   │   ├── text/                 # TSX text/telop Skills
+│   │   ├── effects/              # semantic visual-effect Skills
+│   │   └── presets/              # style Skills
 │   ├── effect-registry/          # effect metadata + backend resolution
 │   ├── wasm-effects/             # Rust → WASM portable effects
-│   ├── remotion-presets/         # TS/Remotion motion presets
+│   ├── remotion-presets/         # TSX/Remotion motion presets
 │   └── shared/                   # shared types/utilities
 │
 ├── engines/
 │   ├── rust/                     # native Rust media/effect engine
 │   ├── python/                   # analysis / STT / CV / ML
+│   ├── js/                       # lightweight visual-effect runtime
 │   └── ffmpeg/                   # media execution adapters
 │
 ├── projects/                     # canonical project JSON examples
@@ -120,6 +196,54 @@ video-editor/
 ├── docs/
 ├── schemas/
 └── .github/workflows/
+```
+
+## REST / MCP / AW
+
+同じSkillとproject.jsonを、会話・フロント・GitHubから利用する。
+
+```text
+Browser
+   │ POST /video/edit
+   ▼
+REST
+   │
+   ├──────────→ MCP
+   │
+   └──────────→ GitHub Issue / AW
+                         │
+                         ▼
+                       Skill
+                         ▼
+                    project.json
+                         ▼
+                TSX / Python / JS / WASM
+                         ▼
+                      Render
+                         ▼
+                  Artifact / Preview
+```
+
+RESTはフロント向けの薄いHTTP入口。認証やジョブ受付を担当し、編集ロジックはSkill/project.json側に寄せる。
+
+例：
+
+```http
+POST /video/edit
+Content-Type: application/json
+
+{
+  "project": "movie-001",
+  "instruction": "12秒から0.5秒だけMVっぽいglitchを入れて"
+}
+```
+
+```json
+{
+  "job_id": "edit-123",
+  "status": "queued",
+  "project": "movie-001"
+}
 ```
 
 ## Skill model
@@ -137,7 +261,7 @@ Skill
  └─ fallback
 ```
 
-利用者はRust/WASMを知る必要がない。
+利用者はRust/WASM/JSを知る必要がない。
 
 ## Effect model
 
@@ -157,7 +281,7 @@ Effectはengine-independentなsemantic operation。
 }
 ```
 
-同じEffectにRust/WASM、native Rust、Remotion/TS、FFmpegなど複数backendを持てる。
+同じEffectにRust/WASM、native Rust、JS、Remotion/TS、FFmpegなど複数backendを持てる。
 
 ## Conversation-first editing
 
@@ -210,10 +334,10 @@ MCPは会話をSkillへ解決し、project.jsonを変更し、適切なengineを
 | Composition | composition |
 | Layer | layer |
 | Keyframe | keyframes |
-| Text Animator | TS/Remotion Skill |
+| Text Animator | TSX/Remotion Skill |
 | Shape Layer | SVG / Canvas |
 | Effect | semantic effect |
-| Expression | TS expression / data |
+| Expression | TSX expression / data |
 | Adjustment Layer | effect scope |
 | Transition | transition Skill |
 | Render Queue | render job |
@@ -226,14 +350,14 @@ Adobeそのものをcloneするのではなく、**概念と編集能力をOSS/p
 
 ## Skill categories
 
-### Visual effects
+### Text / composition — TSX
+title-card / telop / subtitle / kinetic-typography / social-caption / lower-third / logo-reveal / typewriter / pop / bounce / tracking / word-highlight
+
+### Visual effects — JS / Rust / WASM
 blur / glow / sharpen / glitch / chromatic-aberration / shake / zoom / punch-in / distortion / warp / noise / film / vignette / grain / color / pixelate
 
 ### Transition
 fade / crossfade / wipe / slide / zoom / glitch / whip / match-cut
-
-### Text / Motion
-title-card / kinetic-typography / subtitle / social-caption / lower-third / logo-reveal / typewriter / pop / bounce / tracking / word-highlight
 
 ### Audio
 normalize / silence-cut / ducking / fade / beat-detection / voice-music separation
@@ -247,32 +371,32 @@ STT / scene-detection / silence-detection / beat-detection / face-object detecti
 
 ```text
 youtube-short
- ├─ scene-detection
- ├─ silence-cut
- ├─ punch-in
- ├─ kinetic-text
- ├─ subtitle
- ├─ sound-ducking
- └─ color
+ ├─ scene-detection        → Python
+ ├─ silence-cut            → Python/FFmpeg
+ ├─ punch-in               → TSX
+ ├─ kinetic-text           → TSX
+ ├─ subtitle               → TSX
+ ├─ sound-ducking          → Python/FFmpeg
+ └─ color                  → JS/WASM
 
 mv-style
- ├─ beat-detection
- ├─ glitch
- ├─ chromatic-aberration
- ├─ zoom
- ├─ shake
- ├─ film
- └─ color
+ ├─ beat-detection         → Python
+ ├─ glitch                 → WASM
+ ├─ chromatic-aberration   → WASM
+ ├─ zoom                   → TSX
+ ├─ shake                  → TSX/WASM
+ ├─ film                   → WASM
+ └─ color                  → JS/WASM
 
 talk-video
- ├─ STT
- ├─ silence-cut
- ├─ subtitle
- ├─ punch-in
- └─ audio-normalize
+ ├─ STT                    → Python
+ ├─ silence-cut            → Python/FFmpeg
+ ├─ subtitle               → TSX
+ ├─ punch-in               → TSX
+ └─ audio-normalize        → Python/FFmpeg
 ```
 
-## Python / Rust / WASM strategy
+## Python / Rust / JS / WASM strategy
 
 ### Python
 分析・判断材料を作る。
@@ -285,13 +409,16 @@ video → STT / scene / silence / beat / CV
 ```
 
 ### Rust
-高速なframe/pixel処理を担当。最初はstandalone CLIとして実装し、後からWASM targetを追加する。
+高速なframe/pixel処理を担当。最初はstandalone effect coreとして実装し、nativeとWASM targetを持たせる。
 
 ```text
 Rust effect core
  ├─ native
  └─ wasm32
 ```
+
+### JS
+軽量なvisual effectやブラウザ側の即時プレビューを担当する。重い処理を必ずJSに寄せるのではなく、portable runtimeとしてWASM/Rustへ逃がせる。
 
 ### WASM
 **portable effect runtime**。同じEffectをbrowser / Node / desktop / server / CIで可能な限り共通利用する。
@@ -319,32 +446,37 @@ history
 
 Undoはピクセルを逆演算するのではなく、**編集状態を戻す**。
 
-## Browser / CLI / MCP / CI
+## Browser / CLI / MCP / REST / AW / CI
 
 同じcanonical dataとSkillを共有する。
 
 ```text
-              project.json
-                   │
-       ┌───────────┼───────────┐
-       ▼           ▼           ▼
-      MCP         CLI       Browser
-       │           │           │
-       └───────────┼───────────┘
-                   ▼
-                Engines
-                   │
-                   ▼
-                  CI
+                 project.json
+                      │
+       ┌──────────────┼──────────────┐
+       ▼              ▼              ▼
+      MCP            REST           CLI
+       │              │              │
+       └──────────────┼──────────────┘
+                      ▼
+                     AW
+                      │
+                   Engines
+                      │
+                      ▼
+                     CI
+                      │
+                      ▼
+                 Artifact
 ```
 
-GUIはoptional。基本はOpenCode → MCP → project.json → renderで完結する。
+GUIはoptional。基本はOpenCode → MCP、Browser → REST、GitHub → AWのどれからでも同じ編集状態へ到達できる。
 
 ## Reproducible rendering
 
 Renderはproject JSON、Skill versions、engine versions、asset references、effect parametersから再現可能にする。
 
-GitHub Actionsでpreview/render/artifactを生成する。
+GitHub Actions / AWでpreview/render/artifactを生成する。
 
 ## End-to-end
 
@@ -364,8 +496,8 @@ GitHub Actionsでpreview/render/artifactを生成する。
              │
        ┌─────┼──────┐
        ▼     ▼      ▼
-    Python   TS    WASM
-    analysis motion effects
+    Python   TSX    WASM
+    analysis text   effects
        │     │      │
        └─────┼──────┘
              ▼
@@ -384,19 +516,20 @@ GitHub Actionsでpreview/render/artifactを生成する。
 
 1. **Talk to edit.**
 2. **MCP is the conversational interface.**
-3. **Skills express intent, not implementation.**
-4. **JSON is canonical.**
-5. **Remotion owns composition.**
-6. **Python owns analysis.**
-7. **Rust owns performance-critical processing.**
-8. **WASM makes effects portable.**
-9. **FFmpeg remains the media foundation.**
-10. **GUI is optional.**
-11. **Edits are inspectable, deterministic and reversible.**
-12. **One Skill should be reusable across MCP/CLI/browser/CI where practical.**
-13. **Do not make users learn the underlying engine.**
-14. **Prefer small composable Skills over a monolithic editor.**
-15. **Adobe compatibility is a behavioral/conceptual target, not a dependency.**
+3. **REST is the frontend HTTP interface.**
+4. **Skills express intent, not implementation.**
+5. **JSON is canonical.**
+6. **TSX/Remotion owns text and composition.**
+7. **Python owns analysis.**
+8. **JS/Rust/WASM own visual style and effects.**
+9. **WASM makes effects portable.**
+10. **FFmpeg remains the media foundation.**
+11. **GUI is optional.**
+12. **Edits are inspectable, deterministic and reversible.**
+13. **One Skill should be reusable across MCP/REST/CLI/browser/AW/CI where practical.**
+14. **Do not make users learn the underlying engine.**
+15. **Prefer small composable Skills over a monolithic editor.**
+16. **Adobe compatibility is a behavioral/conceptual target, not a dependency.**
 
 ## Roadmap
 
@@ -406,9 +539,13 @@ GitHub Actionsでpreview/render/artifactを生成する。
 - [x] Skill specification
 - [x] MCP specification
 - [x] Remotion-first architecture
+- [x] TSX text / visual-effect responsibility boundary
+- [x] REST interface concept
+- [ ] GH AW execution pipeline
 
 ### Phase 2 — Talk to edit
 - [ ] minimal MCP server
+- [ ] REST `POST /video/edit` + job status
 - [ ] video.inspect/apply/modify/remove/undo
 - [ ] Skill registry
 - [ ] project state/history
@@ -420,6 +557,7 @@ GitHub Actionsでpreview/render/artifactを生成する。
 - [ ] shake
 - [ ] chromatic aberration
 - [ ] color / film
+- [ ] JS effect runtime
 - [ ] Rust effect core
 - [ ] Rust → WASM build
 
@@ -435,7 +573,8 @@ GitHub Actionsでpreview/render/artifactを生成する。
 - [ ] Remotion preview
 - [ ] render/export
 - [ ] browser client
-- [ ] GitHub Actions
+- [ ] REST job API
+- [ ] GitHub Actions / AW
 - [ ] artifact/version management
 - [ ] reproducible builds
 
