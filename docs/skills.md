@@ -16,38 +16,150 @@ A Skill describes:
 - fallback
 - examples
 
-It must not require the caller to know whether execution happens in Rust, WASM, Python, FFmpeg, or Remotion.
+It must not require the caller to know whether execution happens in Rust, WASM, JS, Python, FFmpeg, or Remotion.
 
-## Categories
+## Responsibility-oriented categories
 
-video/
-effects/
-transition/
-text/
-audio/
-analysis/
-presets/
-export/
+### Text / composition
 
-## Composition
+These Skills resolve to structured TSX/Remotion composition.
 
-Skills can call or compose other Skills.
-
-youtube-short:
-- scene-detection
-- silence-cut
-- punch-in
+- telop
 - subtitle
-- kinetic-text
-- sound-ducking
-- color
+- title-card
+- kinetic-typography
+- social-caption
+- lower-third
+- logo-reveal
+- typewriter
+- pop
+- bounce
+- tracking
+- word-highlight
 
-Editing styles therefore become reusable agent capabilities.
+**Principle: text is content and composition, not a pixel effect.**
+
+### Visual effects
+
+These Skills resolve to JS, Rust, WASM, or a suitable fallback.
+
+- blur
+- glow
+- sharpen
+- glitch
+- chromatic-aberration
+- shake
+- zoom
+- punch-in
+- distortion
+- warp
+- noise
+- film
+- vignette
+- grain
+- color
+- pixelate
+
+**Principle: effects are responsible for visual style and “coolness”.**
+
+### Transition
+
+- fade
+- crossfade
+- wipe
+- slide
+- zoom
+- glitch
+- whip
+- match-cut
+
+### Audio
+
+- normalize
+- silence-cut
+- ducking
+- fade
+- beat-detection
+- voice-music separation
+
+### Analysis
+
+- STT
+- scene-detection
+- silence-detection
+- beat-detection
+- face-object detection
+- shot classification
+- color analysis
+
+### Presets / styles
+
+A preset composes multiple Skills without exposing their implementation details.
+
+```text
+mv-style
+ ├─ beat-detection       → Python
+ ├─ kinetic-text         → TSX
+ ├─ glitch               → WASM
+ ├─ chromatic-aberration → WASM
+ ├─ zoom                 → TSX
+ ├─ shake                → TSX/WASM
+ ├─ film                 → WASM
+ └─ color                → JS/WASM
+```
 
 ## Resolution
 
-natural language → skill matching → parameter extraction → validation → project mutation → engine selection → preview/render
+```text
+natural language
+    ↓
+skill matching
+    ↓
+parameter extraction
+    ↓
+validation
+    ↓
+project mutation
+    ↓
+engine selection
+    ↓
+preview / render
+```
 
-## Versioning
+The caller should say **what they want**, not which runtime to execute.
 
-Skills should be versioned independently from engine implementations. Project history records Skill/version and resolved engine so old edits remain inspectable.
+## Composition example
+
+```text
+「ここ、テロップを強調してMVっぽくカッコよく」
+
+                    ↓
+
+             style / edit Skill
+                ┌────┴────┐
+                ↓         ↓
+          TSX telop    WASM effects
+                └────┬────┘
+                     ↓
+                  Remotion
+                     ↓
+                   Render
+```
+
+A single user intent may therefore produce both a TSX text operation and one or more visual-effect operations.
+
+## Backend resolution
+
+The semantic Skill remains stable while its implementation can change.
+
+```text
+glitch
+ ↓
+effect-registry
+ ├─ WASM
+ ├─ native Rust
+ ├─ JS
+ └─ Remotion fallback
+```
+
+Skill versioning is independent from engine implementations. Project history records Skill/version and resolved engine so old edits remain inspectable.
