@@ -1,30 +1,25 @@
 # Effects
 
-Effects are semantic operations, independent of their implementation language.
+Effects are semantic operations over video frames, clips, layers, audio, or time.
 
-Example:
+## Backend priority
 
-```json
-{
-  "name": "chromatic-aberration",
-  "params": {
-    "amount": 0.02
-  },
-  "engine": "wasm"
-}
-```
+1. Rust/WASM for portable pixel/frame effects.
+2. Remotion/TS for composition-aware visual effects and motion.
+3. FFmpeg for codec/media primitives.
+4. Native Rust where WASM is not appropriate.
+5. Python for analysis rather than hot-path rendering.
+
+## Initial visual effects
+
+blur / glow / sharpen / glitch / chromatic-aberration / shake / zoom / punch-in / distortion / warp / noise / film / vignette / grain / color / pixelate
 
 ## Rust/WASM
 
-Rust is the preferred implementation language for portable, performance-sensitive pixel effects. Compile the effect core to WASM and expose a small stable interface.
+Start with a standalone Rust effect core and compile the same core to native and wasm32.
 
-Initial targets:
+The first WASM milestone should be a deterministic effect callable from both browser and render pipeline.
 
-- blur
-- glow
-- glitch
-- shake
-- zoom
-- chromatic aberration
-- film/noise
-- color transforms
+## Effect model
+
+The project JSON names the semantic operation; the effect registry resolves the implementation. The same semantic effect may have WASM, native Rust, Remotion or FFmpeg backends.
