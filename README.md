@@ -1,223 +1,165 @@
 # video-editor
 
-**Adobe After Effects / Premiere を置き換える、AI-native / OSS video editing skeleton.**
+**OpenCode + Remotion を中心に、会話だけで動画を加工する AI-native / OSS monorepo。**
 
-ブラウザ、CLI、MCP、Skills を入口にして、動画編集を「GUIを操作する作業」から
-**構造化されたプロジェクトを生成・編集・レンダリングする作業**へ変える。
-
-## Goal
-
-- After Effects 的なモーショングラフィックスを TypeScript / Rust / Python で再構成
-- Premiere 的なカット・結合・字幕・音声処理をコード化
-- LLM/Agent から MCP 経由で編集操作
-- Skills で「何を作るか」を定義し、実装エンジンから分離
-- JSON を動画編集プロジェクトの canonical data とする
-- GitHub Actions で render / preview / artifact generation を自動化
+「ここにglitch」「字幕をもう少し強く」「この場面だけズーム」のような自然言語をMCPで受け取り、Skillsが編集意図を構造化し、RemotionとWASM effectsで実行する。
 
 ## Architecture
 
 ```text
-User / Agent
-    |
-    +-- CLI
-    +-- MCP
-    +-- Skills
-    |
-    v
-Project JSON
-    |
-    +-- timeline
-    +-- layers
-    +-- text
-    +-- audio
-    +-- effects
-    +-- keyframes
-    |
-    +-------------------+
-    |                   |
-   TS                  Rust
- Remotion             FFmpeg
- motion/UI             render/core
-    |
-    +---------+
-              |
-             Python
-        analysis / AI / STT
-              |
-              v
-           MP4/WebM
+User
+  │ natural language
+  ▼
+OpenCode
+  │
+  ▼
+MCP ────────────────┐
+  │                 │
+  ▼                 ▼
+Skills          project.json
+  │                 │
+  └───────┬─────────┘
+          ▼
+   Effect / Edit Plan
+          │
+     ┌────┴──────────────┐
+     ▼                   ▼
+ Remotion             WASM
+ TS composition       Rust effects
+     │                   │
+     └─────────┬─────────┘
+               ▼
+            Render
+               │
+            MP4/WebM
 ```
 
-## Language roles
-
-### TypeScript
-
-- timeline / composition
-- browser editor
-- SVG / Canvas
-- text animation
-- Remotion integration
-- MCP server interface
-
-### Rust
-
-- high-performance media operations
-- FFmpeg orchestration
-- frame / clip processing
-- batch rendering
-- future native engine
-
-### Python
-
-- speech-to-text
-- scene detection
-- silence detection
-- audio analysis
-- computer vision
-- research / ML experiments
-
-## AE replacement map
-
-| After Effects concept | video-editor |
-|---|---|
-| Composition | project / composition JSON |
-| Layer | layer |
-| Keyframe | keyframes |
-| Text Animator | TS motion preset |
-| Shape Layer | SVG / Canvas |
-| Effect | effect node |
-| Expression | TS expression |
-| Render Queue | Rust/FFmpeg render job |
-| Script / ExtendScript | MCP / Skills |
-| Plugin | MCP tool / engine adapter |
-
-## MCP
-
-The target interface is an **After Effects-like editing MCP**.
-
-Example intent:
-
-```text
-「30秒動画を作って。タイトルを0-2秒で出して、
-2-8秒は画像をズーム、最後にCTAを表示」
-```
-
-Agent translates this into structured project operations:
-
-```json
-{
-  "composition": {"duration": 30, "fps": 30},
-  "layers": [
-    {
-      "type": "text",
-      "text": "TITLE",
-      "in": 0,
-      "out": 2,
-      "animation": "fade-up"
-    }
-  ]
-}
-```
-
-MCP should eventually expose operations such as:
-
-- create_project
-- add_composition
-- add_layer
-- add_text
-- add_asset
-- set_keyframe
-- apply_effect
-- set_transition
-- analyze_clip
-- render
-- preview
-- export
-
-## Skills
-
-Skills are the **semantic editing recipes** above the MCP primitives.
-
-Examples:
-
-- `ae-title-card`
-- `ae-kinetic-typography`
-- `ae-lower-third`
-- `ae-logo-reveal`
-- `ae-chroma-key`
-- `ae-zoom-cut`
-- `ae-social-caption`
-- `ae-youtube-intro`
-
-A Skill describes **what the editor should achieve**.
-The MCP describes **how the project is manipulated**.
-
-```text
-Skill
-  ↓
-intent
-  ↓
-MCP operations
-  ↓
-project.json
-  ↓
-TS/Rust/Python
-  ↓
-render
-```
-
-## Skeleton
+## Monorepo
 
 ```text
 video-editor/
-├── README.md
-├── docs/
-│   ├── architecture.md
-│   ├── project-schema.md
-│   └── mcp.md
-├── mcp/
-├── skills/
-├── src/
-│   ├── ts/
-│   ├── rs/
-│   └── py/
+├── apps/
+│   ├── remotion/          # composition / preview / render
+│   └── mcp/               # conversational editing MCP
+├── packages/
+│   ├── schema/            # canonical project/effect schemas
+│   ├── skills/            # semantic editing recipes
+│   └── wasm-effects/      # Rust → WASM effect packages
+├── engines/
+│   ├── python/            # analysis / STT / CV / ML
+│   └── rust/              # native/WASM media processing
+├── projects/              # example project JSON
 ├── examples/
-├── projects/
-└── .github/
-    └── workflows/
+└── docs/
+    ├── architecture.md
+    ├── effects.md
+    ├── mcp.md
+    └── skills.md
 ```
 
-## Design principles
+## Roles
 
-1. **JSON is data, not UI.**
-2. **MCP is the editing interface.**
-3. **Skills are reusable editing intelligence.**
-4. **TS owns composition and motion.**
-5. **Rust owns performance-critical media work.**
-6. **Python owns analysis and ML.**
-7. **Rendering must be reproducible.**
-8. **GUI is optional; the agent can operate the editor directly.**
-9. **Every important operation should be inspectable as data.**
-10. **Adobe compatibility is a behavioral target, not a dependency.**
+| Layer | Responsibility |
+|---|---|
+| OpenCode | natural-language editing |
+| MCP | conversational interface + project operations |
+| Skills | reusable editing intelligence |
+| JSON | canonical project/effect data |
+| Remotion / TS | composition, timeline, motion, text |
+| Rust / WASM | pixel/frame effects and heavy processing |
+| Python | analysis, STT, scene/silence/audio/CV/ML |
+| FFmpeg | media I/O / codec operations |
+
+## Conversation-first editing
+
+Examples:
+
+> 「ここ、MVっぽくglitch入れて」
+
+> 「12秒から0.5秒だけglitch。強さは中」
+
+> 「さっきのglitch半分にして」
+
+> 「このセリフに合わせて字幕を出して、少し派手に」
+
+MCP resolves the intent to a Skill, modifies canonical project data, and runs the appropriate engine. The user does not need to operate a traditional timeline UI.
+
+## Effect model
+
+Skills are engine-independent. An effect declares parameters and an implementation backend can be selected automatically.
+
+```json
+{
+  "type": "effect",
+  "name": "glitch",
+  "start": 12.0,
+  "duration": 0.5,
+  "params": {
+    "intensity": 0.6
+  },
+  "engine": "wasm"
+}
+```
+
+The same semantic effect can later have WASM, native Rust, FFmpeg, or TS implementations without changing the user-facing Skill.
+
+## Skills
+
+Initial categories:
+
+```text
+skills/
+├── effects/
+│   ├── blur/
+│   ├── glow/
+│   ├── glitch/
+│   ├── shake/
+│   ├── zoom/
+│   ├── chromatic-aberration/
+│   ├── film/
+│   └── color/
+├── transition/
+├── text/
+├── audio/
+├── analysis/
+└── presets/
+```
+
+A preset can compose multiple Skills:
+
+```text
+youtube-short
+ ├─ scene-detection
+ ├─ silence-cut
+ ├─ punch-in
+ ├─ kinetic-text
+ ├─ subtitle
+ ├─ sound-ducking
+ └─ color
+```
+
+## Principles
+
+1. **Talk to edit.**
+2. **MCP is the interface.**
+3. **Skills express intent, not implementation.**
+4. **JSON is canonical.**
+5. **Remotion owns composition.**
+6. **Rust/WASM owns effects.**
+7. **Python owns analysis.**
+8. **GUI is optional.**
+9. **Every edit is inspectable and reversible.**
+10. **One Skill should work across browser, CLI, MCP and CI where practical.**
 
 ## Roadmap
 
-- [ ] project schema
-- [ ] minimal TS composition
-- [ ] Rust FFmpeg renderer
-- [ ] Python media-analysis tools
-- [ ] MCP server
-- [ ] first AE-compatible Skills
-- [ ] browser timeline
-- [ ] preview renderer
-- [ ] GitHub Actions render pipeline
-- [ ] reusable asset/effect library
-
-## Non-goal
-
-This project does not attempt to clone Adobe's implementation or proprietary internals.
-The target is an interoperable, programmable editing workflow with comparable concepts.
-
-## License
-
-TBD.
+- [ ] monorepo workspace
+- [ ] canonical project/effect schema
+- [ ] minimal Remotion app
+- [ ] MCP conversational edit tools
+- [ ] Skill registry
+- [ ] first Rust/WASM effects
+- [ ] Python analysis bridge
+- [ ] preview / undo
+- [ ] GitHub Actions render
+- [ ] browser client
