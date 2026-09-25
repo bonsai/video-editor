@@ -1,21 +1,36 @@
 # Architecture
 
-## Core contract
+video-editor is a programmable editing system rather than a GUI clone.
 
-The system separates **intent**, **data**, and **execution**.
+intent → skill → operation → canonical state → engine → render
 
-```text
-conversation → Skill → project.json → engine → render
-```
+Layers:
+1. Intent — what the user wants.
+2. Data — what the project currently contains.
+3. Execution — how pixels/media are produced.
 
-- Skill: what should happen
-- project JSON: what is currently true
-- engine: how it is executed
+Runtime selection:
+- Composition / motion → Remotion / TypeScript
+- Analysis / inference → Python
+- Pixel / frame effects → Rust / WASM
+- Codec / media I/O → FFmpeg
+- Conversation → MCP
+- Semantic recipes → Skills
 
-## Engine selection
+## WASM boundary
 
-Prefer WASM for portable frame effects. Use Remotion for composition and TS-native motion. Use Python for analysis. Use FFmpeg/native Rust where codec or throughput requirements justify it.
+Rust effects expose a small stable interface. Semantic effect names and parameters belong to the project schema; the WASM ABI is an implementation detail.
 
-## Reversibility
+Skill: glitch → Effect JSON → Effect registry → wasm/native/remotion fallback
 
-MCP mutations should produce inspectable project JSON changes. Undo should restore the previous project state rather than attempting to reverse pixels.
+## State and history
+
+S0 → edit → S1 → edit → S2
+
+Store Skill/version, parameters, resolved engine and project-state transition for each important operation.
+
+## Agent-first operation
+
+OpenCode → MCP → Skill resolution → project mutation → preview → user feedback → mutation → render
+
+The browser is a viewer/editor for humans who want it, not a prerequisite.
