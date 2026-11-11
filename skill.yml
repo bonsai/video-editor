@@ -1,0 +1,15 @@
+schema_version: "1.0"
+kind: "project"
+id: "video-editor"
+name: "video-editor"
+description: "Adobe After Effects / Premiere 的な機能を巨大なGUIとして再現するのではなく、**MCP + Skills + canonical JSON + Remotion + Python + Rust/WASM** に分解する。"
+loadable: false
+status: "declared_no_SKILL_md"
+repository: ""
+languages: ["TypeScript"]
+entrypoints: ["package.json"]
+nested_skills: []
+files_excl_git: 18
+bytes_excl_git: 92746
+notes: "Lives under skills/ but has no SKILL.md, so opencode does not load it. Declared here for inventory; add SKILL.md to promote it."
+generated_by: "soubi/inventory"
